@@ -36,3 +36,9 @@ Left::{
 ^f::{
 	Send("store{Enter}")
 }
+
+; the usual
+^u::{
+	Send{"store{Enter}"}
+	send{"pro{4}{Enter}"}
+}
