@@ -14,8 +14,8 @@ This mod shows a per-player stats leaderboard at the end of co-op runs in Slay t
 | Game logic | C# / .NET 8, compiled to `sts2.dll` |
 | Mod loader | Native — game supports mods via `Slay the Spire 2/mods/` directory |
 | Patching library | [HarmonyLib](https://github.com/pardeike/Harmony) (runtime method patching) |
-| Distribution | Steam Workshop (natively supported) and [Nexus Mods](https://www.nexusmods.com/games/slaythespire2) |
-| Mod manager | Thunderstore / R2Modman (community, optional) |
+| Distribution | [Nexus Mods](https://www.nexusmods.com/games/slaythespire2) (Steam Workshop **not yet live** as of March 2026) |
+| Mod manager | GUMM (Godot Universal Mod Manager, community) |
 
 STS1 tools (ModTheSpire, BaseMod) are **incompatible** — full rewrite required.
 
@@ -54,8 +54,13 @@ public partial class MainFile : Node
 }
 ```
 
-Key namespaces confirmed from existing mods:
+Key namespaces confirmed from existing mods and decompilation:
 - `MegaCrit.Sts2.Core.Modding` — mod initializer attribute, logging
+- `MegaCrit.Sts2.Core.Entities.Players` — `Player` class, `Player.CreateForNewRun(CharacterModel, UnlockState, ulong)`
+- `MegaCrit.Sts2.Core.Models` — `ModelDb`, `RelicModel`, `CharacterModel`
+- `MegaCrit.Sts2.Core.Models.RelicPools` — `SharedRelicPool`
+- `MegaCrit.Sts2.Core.Unlocks` — `UnlockState`
+- `MegaCrit.Sts2.Core.Logging` — `Log.Info()`
 - `HarmonyLib` — runtime patching
 - `Godot` — UI (CanvasLayer, nodes, signals)
 
@@ -71,6 +76,8 @@ Key namespaces confirmed from existing mods:
 - [`Alchyr/ModTemplate-StS2`](https://github.com/Alchyr/ModTemplate-StS2) — official empty mod template with BaseLib
 - [`lamali292/sts2_example_mod`](https://github.com/lamali292/sts2_example_mod) — example with patches and a custom relic
 - [`freude916/sts2-quickRestart`](https://github.com/freude916/sts2-quickRestart) — simple save/load mod
+- [`jidon333/STS2_Superfast_Mod`](https://github.com/jidon333/STS2_Superfast_Mod) — speed mod, another real-world example
+- [`Cany0udance/EarlyStS2ModdingGuides`](https://github.com/Cany0udance/EarlyStS2ModdingGuides/wiki/Getting-Started-With-Modding) — community getting-started wiki (covers powers, relics, enemies, encounters, card images)
 
 ---
 
@@ -88,11 +95,30 @@ Key namespaces confirmed from existing mods:
 
 ## 4. Existing Stats Mods to Study
 
+### Skada Damage Meter (Nexus Mods #33)
+- Most comprehensive stat tracker; 17 stat categories:
+  - Damage dealt, DPT (damage per turn), overkill
+  - Block gained
+  - rDPS assist (contribution to teammate damage via debuffs)
+  - Card efficiency, energy spent, potions used
+  - Debuffs applied, death log
+  - Per-fight records, per-turn charts
+- Co-op ready; developed from March 2026
+- **Most useful reference** for what stats are technically accessible
+
+### Damage Meter (Nexus Mods #12)
+- Tracks: damage, block, cards played, energy used, per-turn trends, lifetime records
+- Persists lifetime records to a settings JSON file
+
 ### MultiplayerStats (Nexus Mods #41)
 - Author: Pottymouth222, v0.1.0, uploaded March 11 2026
 - **In-combat** overlay showing per-player: current fight damage, cumulative run damage, block gained, run damage graph
 - Togglable overlay
 - **Does not** show an end-of-run summary screen — this is the gap our mod fills
+
+### DevConsole (Nexus Mods #1)
+- Has a prototype `leaderboard upload` console command
+- No polished end-of-run leaderboard UI — confirms the gap we are filling
 
 ### STS2-DamageTracker (GitHub: BAIGUANGMEI)
 - Multiplayer damage monitor with Chinese locale support
@@ -156,11 +182,17 @@ Fields tried: `DamageDealt`, `FinalDamage`, `ActualDamage`, `UnblockedDamage`, `
 
 Based on what existing mods track and what the game exposes, the leaderboard can feasibly show:
 
-### Confirmed Trackable (via `AfterDamageGiven` hook)
+### Confirmed Trackable (verified by Skada / DamageTracker mods)
 - **Total damage dealt** (all fights in run)
+- **Overkill damage** (damage past enemy HP)
+- **DPT** (damage per turn)
 - **Highest single hit**
 - **Per-fight damage** (via `AfterCombatEnd` reset)
-- **Total block generated** (via `AfterPlayerTurnStart`)
+- **Total block generated**
+- **rDPS assist** (damage enabled by your debuffs landing on enemies)
+- **Debuffs applied** (Weak, Vulnerable, etc.)
+- **Energy spent**
+- **Potions used**
 
 ### Likely Trackable (via additional Harmony patches on game methods)
 - **Cards played** — patch the card-play method
@@ -231,12 +263,27 @@ Pattern from DamageTracker: use `CanvasLayer` as a non-interfering overlay.
 
 ## 10. References
 
-- [lamali292/sts2_example_mod](https://github.com/lamali292/sts2_example_mod) — STS2 example mod with Harmony patches
+### Mod Templates & Frameworks
 - [Alchyr/ModTemplate-StS2](https://github.com/Alchyr/ModTemplate-StS2) — recommended starting template
-- [Alchyr/BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2) — optional base library
-- [BAIGUANGMEI/STS2-DamageTracker](https://github.com/BAIGUANGMEI/STS2-DamageTracker) — closest existing mod; study its hooks and reflection patterns
-- [MultiplayerStats on Nexus](https://www.nexusmods.com/slaythespire2/mods/41) — fills gap in combat; our mod fills the post-run gap
-- [ptrlrd/spire-codex](https://github.com/ptrlrd/spire-codex) — STS2 decompiled card/data database
+- [Alchyr/BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2) — optional base library (NuGet: `Alchyr.Sts2.BaseLib`)
+- [lamali292/sts2_example_mod](https://github.com/lamali292/sts2_example_mod) — STS2 example mod with Harmony patches
 - [freude916/sts2-quickRestart](https://github.com/freude916/sts2-quickRestart) — simple mod for structure reference
-- [Nexus Mods — STS2](https://www.nexusmods.com/games/slaythespire2/mods) — browse all existing mods
+- [jidon333/STS2_Superfast_Mod](https://github.com/jidon333/STS2_Superfast_Mod) — another real-world mod example
+
+### Existing Stats Mods (study these)
+- [Skada Damage Meter — Nexus #33](https://www.nexusmods.com/slaythespire2/mods/33) — 17 tracked stats; most comprehensive
+- [Damage Meter — Nexus #12](https://www.nexusmods.com/slaythespire2/mods/12) — lifetime records, per-turn trends
+- [MultiplayerStats — Nexus #41](https://www.nexusmods.com/slaythespire2/mods/41) — per-player co-op in-combat overlay
+- [BAIGUANGMEI/STS2-DamageTracker](https://github.com/BAIGUANGMEI/STS2-DamageTracker) — open source; study hooks and reflection patterns
+- [DevConsole — Nexus #1](https://www.nexusmods.com/slaythespire2/mods/1) — prototype leaderboard upload command
+
+### Decompilation & Data
+- [ptrlrd/spire-codex](https://github.com/ptrlrd/spire-codex) — STS2 decompiled card/data database; pipeline for reading `sts2.dll`
 - [GitHub slaythespire2 topic](https://github.com/topics/slaythespire2) — all tagged repos
+
+### Documentation
+- [Cany0udance/EarlyStS2ModdingGuides](https://github.com/Cany0udance/EarlyStS2ModdingGuides/wiki/Getting-Started-With-Modding) — community getting-started wiki
+- [BaseLib Wiki](https://alchyr.github.io/BaseLib-Wiki/) — BaseLib API reference
+- [Nexus Mods — STS2](https://www.nexusmods.com/games/slaythespire2/mods) — browse all existing mods
+- [MegaCrit FAQ](https://www.megacrit.com/faq/) — official modding stance; Discord link
+- [PCGamingWiki — STS2](https://www.pcgamingwiki.com/wiki/Slay_the_Spire_2) — file paths, mod loading, technical details
